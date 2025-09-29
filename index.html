@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Types Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            background-image: linear-gradient(to bottom right, #f8fafc, #e0f2fe); /* slate-50 to sky-100 */
+        }
+        /* Style for the code blocks */
+        pre {
+            background-color: #1f2937; /* gray-800 */
+            color: #f3f4f6; /* gray-100 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 0.875rem;
+            position: relative;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Copy button styling */
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4b5563; /* gray-600 */
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: background-color 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #6b7280; /* gray-500 */
+        }
+        
+        /* General animation for elements entering the screen */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .element-enter {
+            animation: fadeInUp 0.5s ease-out forwards;
+            opacity: 0; /* Start hidden */
+        }
+
+        /* Colored shadow effect on hover */
+        .card-hover-shadow {
+            transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .card-hover-shadow:hover {
+            transform: translateY(-0.5rem);
+            box-shadow: 0 10px 15px -3px var(--shadow-color, rgba(0,0,0,0.1)), 0 4px 6px -2px var(--shadow-color, rgba(0,0,0,0.05));
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8 md:py-12">
+        <header class="text-center mb-10 overflow-hidden">
+            <h1 id="main-title" class="text-4xl md:text-5xl font-bold text-gray-900">Database Explorer</h1>
+            <p id="main-subtitle" class="mt-3 text-lg text-gray-600">An overview of modern database architectures.</p>
+            <!-- Search Input -->
+            <div id="search-container" class="mt-8 max-w-xl mx-auto">
+                <input type="text" id="search-input" placeholder="Search for a database type..." class="w-full px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+            </div>
+        </header>
+
+        <!-- Grid for Database Cards -->
+        <main id="database-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Database cards will be injected here by JavaScript -->
+        </main>
+         <div id="no-results" class="text-center text-gray-500 py-16 hidden">
+            <h3 class="text-2xl font-semibold">No Results Found</h3>
+            <p>Try adjusting your search terms.</p>
+        </div>
+    </div>
+
+    <!-- Modal for Detail Page -->
+    <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white w-full max-w-3xl max-h-[90vh] rounded-lg shadow-2xl transform transition-all duration-300 ease-out opacity-0 scale-95 -translate-y-10 overflow-hidden" id="modal-content">
+            <div id="modal-header" class="flex justify-between items-center p-5 border-b border-gray-200 transition-colors duration-300">
+                <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl transition-colors">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]" id="modal-body">
+                <!-- Modal content will be injected here -->
+            </div>
+             <div class="p-4 bg-gray-50 border-t border-gray-200 text-right rounded-b-lg">
+                <button id="close-modal-footer-btn" class="px-6 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- DATA SOURCE with Colors and Icons ---
+            const databases = [
+                {
+                    name: 'SQL Databases (Relational)',
+                    color: '#3b82f6', // blue-500
+                    lightColor: 'rgba(59, 130, 246, 0.05)',
+                    shadowColor: 'rgba(59, 130, 246, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
+                    description: 'SQL (Structured Query Language) databases are the most traditional type. They store data in a structured format using tables with rows and columns.',
+                    useCases: ['E-commerce platforms', 'Banking and financial systems', 'Transactional systems.'],
+                    example: {
+                        title: 'Example (MySQL, PostgreSQL)',
+                        description: 'Imagine a table to store user information.',
+                        code: `SELECT Email FROM Users WHERE Username = 'john_doe';`
+                    }
+                },
+                {
+                    name: 'Columnar Databases',
+                    color: '#14b8a6', // teal-500
+                    lightColor: 'rgba(20, 184, 166, 0.05)',
+                    shadowColor: 'rgba(20, 184, 166, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>`,
+                    description: 'Unlike traditional databases that store data in rows, columnar databases store it in columns. This structure is highly optimized for analytical queries.',
+                    useCases: ['Data Warehousing', 'Business Intelligence (BI) and Analytics', 'Large-scale observational data.'],
+                    example: {
+                        title: 'Example (Google BigQuery, ClickHouse)',
+                        description: 'To find the total number of users who joined in 2023, the database only needs to read the `JoinDate` column.',
+                        code: `SELECT COUNT(UserID) FROM Users WHERE YEAR(JoinDate) = 2023;`
+                    }
+                },
+                {
+                    name: 'Time-Series Databases',
+                    color: '#6366f1', // indigo-500
+                    lightColor: 'rgba(99, 102, 241, 0.05)',
+                    shadowColor: 'rgba(99, 102, 241, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.9 18.35A9 9 0 0 0 21 12a9 9 0 1 0-9.45 8.95"></path><polyline points="22 2 12 12 8 8"></polyline></svg>`,
+                    description: 'These databases are specifically designed to handle time-stamped data. They are optimized for high-volume data ingestion and quick queries on time-based ranges.',
+                    useCases: ['IoT sensor data monitoring', 'Stock market and financial data analysis', 'Real-time application monitoring.'],
+                    example: {
+                        title: 'Example (InfluxDB, Timescale)',
+                        description: 'To get the average temperature in \'room1\' for the last hour.',
+                        code: `SELECT MEAN("celsius") FROM "temperature" WHERE "location" = 'room1' AND time > now() - 1h;`
+                    }
+                },
+                {
+                    name: 'In-Memory Databases',
+                    color: '#ef4444', // red-500
+                    lightColor: 'rgba(239, 68, 68, 0.05)',
+                    shadowColor: 'rgba(239, 68, 68, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.73 18a2.62 2.62 0 0 0-1.76-.73L13 15.44V3.5A2.5 2.5 0 0 0 10.5 1h-5A2.5 2.5 0 0 0 3 3.5v12.2A2.3 2.3 0 0 0 .5 18a2.5 2.5 0 0 0 2.5 2.5h16.5a2.8 2.8 0 0 0 2.23-1z"></path><polyline points="13 15.44 13 22 17 22 17 15.44"></polyline></svg>`,
+                    description: 'An in-memory database stores data in a server\'s main memory (RAM) instead of on a disk drive. This allows for incredibly low-latency data access.',
+                    useCases: ['Real-time fraud detection', 'Caching layers for web applications', 'High-traffic applications.'],
+                    example: {
+                        title: 'Example (Redis, SAP HANA)',
+                        description: 'Using Redis to cache a user\'s session information is nearly instantaneous.',
+                        code: `GET session:user123`
+                    }
+                },
+                {
+                    name: 'Graph Databases',
+                    color: '#22c55e', // green-500
+                    lightColor: 'rgba(34, 197, 94, 0.05)',
+                    shadowColor: 'rgba(34, 197, 94, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>`,
+                    description: 'Graph databases are built to store and navigate relationships. They use nodes (to store entities) and edges (to store relationships).',
+                    useCases: ['Social network analysis', 'Recommendation engines', 'Knowledge graphs.'],
+                    example: {
+                        title: 'Example (Neo4j, Amazon Neptune)',
+                        description: 'To find all of Alice\'s friends using a Cypher query.',
+                        code: `MATCH (p:Person {name: 'Alice'})-[:FRIENDS_WITH]->(friend)\nRETURN friend.name;`
+                    }
+                },
+                {
+                    name: 'Document Databases',
+                    color: '#f59e0b', // amber-500
+                    lightColor: 'rgba(245, 158, 11, 0.05)',
+                    shadowColor: 'rgba(245, 158, 11, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
+                    description: 'A type of NoSQL database that stores data in flexible, JSON-like documents. This allows for a flexible schema, where each document can have a different structure.',
+                    useCases: ['Content Management Systems (CMS)', 'User profiles', 'Mobile and web application backends.'],
+                    example: {
+                        title: 'Example (MongoDB, Couchbase)',
+                        description: 'To find users who are interested in \'coding\'.',
+                        code: `db.users.find({ interests: "coding" });`
+                    }
+                },
+                {
+                    name: 'Vector Databases',
+                    color: '#8b5cf6', // violet-500
+                    lightColor: 'rgba(139, 92, 246, 0.05)',
+                    shadowColor: 'rgba(139, 92, 246, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="4"></line><polyline points="18 10 12 4 6 10"></polyline><line x1="21" y1="12" x2="3" y2="12"></line><polyline points="14 18 20 12 14 6"></polyline></svg>`,
+                    description: 'Vector databases are designed to store and search through high-dimensional vectors, which are mathematical representations of data.',
+                    useCases: ['AI-powered semantic search', 'Image, video, and audio retrieval', 'Generative AI and LLMs.'],
+                    example: {
+                        title: 'Example (Pinecone, Weaviate)',
+                        description: 'A search for a vector representing "The cat sat on the mat" would find semantically similar results.',
+                        code: `// Conceptual Query\nsimilarity_search(vector_of("cat on mat"))`
+                    }
+                },
+                {
+                    name: 'Object-Oriented Databases',
+                    color: '#f43f5e', // rose-500
+                    lightColor: 'rgba(244, 63, 94, 0.05)',
+                    shadowColor: 'rgba(244, 63, 94, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l-5.5 9h11z"></path><circle cx="12" cy="15.5" r="5.5"></circle></svg>`,
+                    description: 'These databases store data as objects, just as they are used in object-oriented programming. This eliminates the need to translate or map application objects.',
+                    useCases: ['CAD/CAM and complex engineering designs', 'Scientific modeling and data analysis', 'Telecommunication networks.'],
+                    example: {
+                        title: 'Example (db4o, ZODB)',
+                        description: 'A database can store an instance of a `Car` class directly without breaking it into tables.',
+                        code: `// Python Example\nmy_car = Car("Tesla Model 3", 2022)\ndb.store(my_car)`
+                    }
+                },
+                {
+                    name: 'Blockchain Databases',
+                    color: '#0ea5e9', // sky-500
+                    lightColor: 'rgba(14, 165, 233, 0.05)',
+                    shadowColor: 'rgba(14, 165, 233, 0.25)',
+                    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="2" ry="2"></rect><line x1="17" y1="12" x2="23" y2="12"></line><line x1="1" y1="12" x2="7" y2="12"></line></svg>`,
+                    description: 'A blockchain is a distributed, immutable ledger. Data is stored in "blocks" that are cryptographically linked together in a "chain."',
+                    useCases: ['Supply Chain and provenance tracking', 'Decentralized identity management', 'Cryptocurrency transactions.'],
+                    example: {
+                        title: 'Example (CovenantSQL, BigchainDB)',
+                        description: 'A block in a supply chain ledger creates a verifiable and tamper-proof trail of a product\'s journey.',
+                        code: `// Block Data Structure\n{\n  "ProductID": "XYZ",\n  "Action": "Shipped",\n  "Timestamp": "2023-10-27T11:30:00Z",\n  "PreviousBlockHash": "0000a1..." \n}`
+                    }
+                }
+            ];
+
+            const grid = document.getElementById('database-grid');
+            const modal = document.getElementById('detail-modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalHeader = document.getElementById('modal-header');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const closeModalFooterBtn = document.getElementById('close-modal-footer-btn');
+            const searchInput = document.getElementById('search-input');
+            const noResults = document.getElementById('no-results');
+            const mainTitle = document.getElementById('main-title');
+            const mainSubtitle = document.getElementById('main-subtitle');
+            const searchContainer = document.getElementById('search-container');
+
+            // --- Function to filter and display database cards ---
+            function filterAndRenderCards(searchTerm = '') {
+                grid.innerHTML = '';
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                const filteredDbs = databases.filter(db =>
+                    db.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+                    db.description.toLowerCase().includes(lowerCaseSearchTerm)
+                );
+                
+                if (filteredDbs.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                }
+
+                filteredDbs.forEach((db, index) => {
+                    const originalIndex = databases.indexOf(db);
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-lg shadow-md card-hover-shadow flex flex-col element-enter text-center p-6';
+                    card.style.backgroundColor = db.lightColor;
+                    card.style.setProperty('--shadow-color', db.shadowColor);
+                    card.style.animationDelay = `${index * 100}ms`;
+                    
+                    card.innerHTML = `
+                        <div class="flex-shrink-0 mb-4 mx-auto" style="color: ${db.color};">
+                           ${db.icon}
+                        </div>
+                        <div class="flex-grow flex flex-col">
+                            <h3 class="text-xl font-bold mb-2" style="color: ${db.color};">${db.name}</h3>
+                            <p class="text-gray-600 text-sm mb-4 flex-grow">${db.description}</p>
+                            <div class="pt-4 mt-auto">
+                                <button data-index="${originalIndex}" class="view-details-btn w-full px-4 py-2 text-white rounded-md hover:opacity-90 transition-opacity font-semibold" style="background-color: ${db.color};">View Details</button>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            }
+
+            // --- Function to open and populate the modal ---
+            function openModal(index) {
+                const db = databases[index];
+                
+                modalTitle.textContent = db.name;
+                modalHeader.style.backgroundColor = db.color;
+                modalTitle.style.color = 'white';
+                closeModalBtn.classList.remove('text-gray-500', 'hover:text-gray-800');
+                closeModalBtn.classList.add('text-white', 'opacity-70', 'hover:opacity-100');
+
+                modalBody.innerHTML = `
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-bold text-lg mb-2 text-gray-800 border-b pb-2">Description</h4>
+                            <p class="text-gray-700 leading-relaxed">${db.description}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2 text-gray-800 border-b pb-2">Common Use Cases</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                ${db.useCases.map(uc => `<li>${uc}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2 text-gray-800 border-b pb-2">${db.example.title}</h4>
+                            <p class="text-gray-700 mb-3">${db.example.description}</p>
+                            <pre><button class="copy-btn">Copy</button><code>${db.example.code.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>
+                        </div>
+                    </div>
+                `;
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modalContent.classList.remove('opacity-0', 'scale-95', '-translate-y-10');
+                }, 10);
+            }
+            
+            // --- Function to close the modal ---
+            function closeModal() {
+                 modalContent.classList.add('opacity-0', 'scale-95', '-translate-y-10');
+                 setTimeout(() => {
+                    modal.classList.add('hidden');
+                    // Reset styles after transition
+                    modalHeader.style.backgroundColor = '';
+                    modalTitle.style.color = '';
+                    closeModalBtn.classList.add('text-gray-500', 'hover:text-gray-800');
+                    closeModalBtn.classList.remove('text-white', 'opacity-70', 'hover:opacity-100');
+                 }, 300);
+            }
+
+            // --- Function to handle copy logic ---
+            function handleCopy(e) {
+                if (e.target.classList.contains('copy-btn')) {
+                    const btn = e.target;
+                    const code = btn.nextElementSibling.textContent;
+                    
+                    navigator.clipboard.writeText(code).then(() => {
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => btn.textContent = 'Copy', 2000);
+                    }).catch(() => { // Fallback for browsers that don't support clipboard API in this context
+                        const textArea = document.createElement('textarea');
+                        textArea.value = code;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        btn.textContent = 'Copied!';
+                        setTimeout(() => btn.textContent = 'Copy', 2000);
+                    });
+                }
+            }
+
+            // --- Event Listeners ---
+            searchInput.addEventListener('input', (e) => filterAndRenderCards(e.target.value));
+            
+            grid.addEventListener('click', e => {
+                const btn = e.target.closest('.view-details-btn');
+                if (btn) {
+                    openModal(btn.dataset.index);
+                }
+            });
+            
+            modalBody.addEventListener('click', handleCopy);
+
+            closeModalBtn.addEventListener('click', closeModal);
+            closeModalFooterBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', e => {
+                if (e.target === modal) closeModal();
+            });
+            
+            // --- Initial Render & Animations ---
+            filterAndRenderCards();
+
+            mainTitle.classList.add('element-enter');
+            mainSubtitle.classList.add('element-enter');
+            searchContainer.classList.add('element-enter');
+            mainSubtitle.style.animationDelay = '150ms';
+            searchContainer.style.animationDelay = '300ms';
+        });
+    </script>
+
+</body>
+</html>
+
